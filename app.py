@@ -2,8 +2,8 @@ from flask import Flask, render_template, request
 import joblib
 import pdfplumber
 import docx
-from sklearn.feature_extraction.text import TfidfVectorizer
 import os
+import numpy as np
 
 app = Flask(__name__)
 
@@ -11,9 +11,11 @@ app = Flask(__name__)
 model_path = "resume_classifier.pkl"
 vectorizer_path = "tfidf_vectorizer.pkl"
 
+# Ensure model files exist before loading
 if os.path.exists(model_path) and os.path.exists(vectorizer_path):
     model = joblib.load(model_path)
     vectorizer = joblib.load(vectorizer_path)
+    print("✅ Model and vectorizer loaded successfully.")
 else:
     print("⚠️ ERROR: Model files not found. Check deployment.")
 
@@ -23,26 +25,28 @@ def extract_text_from_pdf(pdf_file):
         text = ""
         with pdfplumber.open(pdf_file) as pdf:
             for page in pdf.pages:
-                text += page.extract_text() + "\n"
-        return text if text else "⚠️ ERROR: No text extracted from PDF."
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n"
+        return text.strip() if text else "⚠️ ERROR: No text extracted from PDF."
     except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
+        print(f"⚠️ ERROR extracting text from PDF: {e}")
         return ""
 
 # Function to extract text from DOCX
 def extract_text_from_docx(docx_file):
     try:
         doc = docx.Document(docx_file)
-        return "\n".join([para.text for para in doc.paragraphs]) or "⚠️ ERROR: No text extracted from DOCX."
+        return "\n".join([para.text for para in doc.paragraphs]).strip() or "⚠️ ERROR: No text extracted from DOCX."
     except Exception as e:
-        print(f"Error extracting text from DOCX: {e}")
+        print(f"⚠️ ERROR extracting text from DOCX: {e}")
         return ""
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
         uploaded_file = request.files["resume"]
-        
+
         if not uploaded_file:
             print("⚠️ ERROR: No file uploaded.")
             return render_template("index.html", result="⚠️ No file uploaded.")
@@ -58,14 +62,19 @@ def home():
             return render_template("index.html", result="⚠️ Unsupported file format.")
 
         if "ERROR" in resume_text:
+            print(f"⚠️ ERROR in extracted text: {resume_text}")
             return render_template("index.html", result=resume_text)
 
-        # Transform the resume text using the vectorizer
+        print(f"🔍 Extracted Resume Text: {resume_text[:500]}...")  # Print first 500 characters
+
+        # Convert text to feature vector
         transformed_text = vectorizer.transform([resume_text])
         prediction = model.predict(transformed_text)[0]
+        confidence_scores = model.predict_proba(transformed_text)[0]  # Get confidence of both classes
 
         result = "Shortlisted ✅" if prediction == 1 else "Not Shortlisted ❌"
-        print(f"🔍 Prediction: {result}")
+        print(f"🔍 Prediction: {result}, Confidence: {confidence_scores}")
+
         return render_template("index.html", result=result)
 
     return render_template("index.html", result="")
