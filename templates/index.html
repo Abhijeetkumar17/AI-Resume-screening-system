@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Screening</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #1E3C72, #2A5298);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        /* Container Box */
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            backdrop-filter: blur(8px);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Upload Form */
+        .upload-container {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        label {
+            font-size: 18px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .file-upload {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.3s ease-in-out;
+        }
+
+        .file-upload:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+        }
+
+        /* Stylish Button */
+        button {
+            background: #00c6ff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background: #0072ff;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 114, 255, 0.3);
+        }
+
+        /* Result Display */
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 22px;
+            font-weight: bold;
+            display: inline-block;
+            border-radius: 6px;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .shortlisted {
+            background: linear-gradient(to right, #11998e, #38ef7d);
+            color: white;
+            box-shadow: 0 5px 15px rgba(56, 239, 125, 0.3);
+        }
+
+        .not-shortlisted {
+            background: linear-gradient(to right, #ff416c, #ff4b2b);
+            color: white;
+            box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Screening</h1>
+
+        <div class="upload-container">
+            <form method="POST" enctype="multipart/form-data">
+                <label for="resume">Upload Resume (PDF or DOCX):</label>
+                <input class="file-upload" type="file" name="resume" accept=".pdf,.docx" required>
+                <button type="submit">Check Resume</button>
+            </form>
+        </div>
+
+        {% if result %}
+            <div class="result-container {% if result == 'Shortlisted' %}shortlisted{% else %}not-shortlisted{% endif %}">
+                Result: {{ result }}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
