@@ -2,41 +2,41 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.utils import resample
 import joblib
+import re
 
-# Sample Training Data (Balanced with both 'Shortlisted' and 'Not Shortlisted')
+# Sample Training Data (More balanced)
 data = {
     "resume": [
-        "Data Scientist skilled in Python, SQL, Machine Learning.",
-        "Full Stack Developer with React, Node.js, Java.",
-        "Marketing expert with SEO, Google Ads, Digital Marketing.",
-        "Software Engineer with Java, Spring Boot, Microservices.",
-        "Python Developer with Flask, Django, AWS experience.",
-        "Customer service representative with strong communication skills.",
-        "Graphic designer with experience in Photoshop, Illustrator.",
-        "Financial analyst skilled in accounting, taxation, Excel."
+        "Python Developer with 3+ years experience in Django and Flask.",
+        "Marketing Manager experienced in SEO, Google Ads, and PPC campaigns.",
+        "Machine Learning Engineer with TensorFlow, PyTorch, and NLP experience.",
+        "Graphic Designer skilled in Adobe Photoshop, Illustrator, and UI/UX design.",
+        "Software Engineer with expertise in Java, Spring Boot, and Microservices.",
+        "Entry-level student looking for a software engineering internship.",
+        "Data Entry Clerk skilled in Microsoft Excel and administrative tasks.",
+        "Customer Support Representative with experience in handling customer complaints."
     ],
-    "hired": [1, 1, 0, 1, 1, 0, 0, 0]  # 1 = Shortlisted, 0 = Not Shortlisted
+    "hired": [1, 1, 1, 1, 1, 0, 0, 0]  # 1 = Shortlisted, 0 = Not Shortlisted
 }
 
 df = pd.DataFrame(data)
 
-# Balance dataset (Ensure equal number of shortlisted and not shortlisted)
-df_hired = df[df["hired"] == 1]
-df_not_hired = df[df["hired"] == 0]
+# Data Cleaning Function
+def clean_text(text):
+    text = re.sub(r"\s+", " ", text)  # Remove extra spaces
+    text = re.sub(r"[^a-zA-Z0-9 ]", "", text)  # Remove special characters
+    return text.lower().strip()
 
-df_not_hired_upsampled = resample(df_not_hired, replace=True, n_samples=len(df_hired), random_state=42)
+df["resume"] = df["resume"].apply(clean_text)
 
-df_balanced = pd.concat([df_hired, df_not_hired_upsampled])
-
-# TF-IDF Vectorization (Fixes irrelevant word matching)
-vectorizer = TfidfVectorizer(stop_words='english', min_df=2)
-X = vectorizer.fit_transform(df_balanced["resume"])
-y = df_balanced["hired"]
+# Train TF-IDF Vectorizer
+vectorizer = TfidfVectorizer(stop_words="english", min_df=2)
+X = vectorizer.fit_transform(df["resume"])
+y = df["hired"]
 
 # Train Model
-model = RandomForestClassifier(n_estimators=50, random_state=42)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X, y)
 
 # Save Model and Vectorizer
