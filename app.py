@@ -1,46 +1,54 @@
-from flask import Flask, render_template, request
-import joblib
+import spacy
 import pdfplumber
 import docx
+import joblib
+from flask import Flask, render_template, request
 import os
-import numpy as np
 
 app = Flask(__name__)
 
-# Load trained model and vectorizer
+# Load ML Model & TF-IDF Vectorizer
 model_path = "resume_classifier.pkl"
 vectorizer_path = "tfidf_vectorizer.pkl"
 
-# Ensure model files exist before loading
 if os.path.exists(model_path) and os.path.exists(vectorizer_path):
     model = joblib.load(model_path)
     vectorizer = joblib.load(vectorizer_path)
-    print("✅ Model and vectorizer loaded successfully.")
 else:
-    print("⚠️ ERROR: Model files not found. Check deployment.")
+    print("⚠️ ERROR: Model files not found!")
 
-# Function to extract text from PDF
+# Load spaCy NLP Model
+nlp = spacy.load("en_core_web_sm")
+
+# ✅ Function to Extract Keywords
+def extract_keywords(text):
+    doc = nlp(text)
+    keywords = [token.text for token in doc if token.pos_ in ["NOUN", "PROPN", "VERB"] and not token.is_stop]
+    return list(set(keywords))
+
+# ✅ Function to Extract Text from PDF
 def extract_text_from_pdf(pdf_file):
-    try:
-        text = ""
-        with pdfplumber.open(pdf_file) as pdf:
-            for page in pdf.pages:
-                extracted = page.extract_text()
-                if extracted:
-                    text += extracted + "\n"
-        return text.strip() if text else "⚠️ ERROR: No text extracted from PDF."
-    except Exception as e:
-        print(f"⚠️ ERROR extracting text from PDF: {e}")
-        return ""
+    text = ""
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            extracted = page.extract_text()
+            if extracted:
+                text += extracted + "\n"
+    return text.strip()
 
-# Function to extract text from DOCX
+# ✅ Function to Extract Text from DOCX
 def extract_text_from_docx(docx_file):
-    try:
-        doc = docx.Document(docx_file)
-        return "\n".join([para.text for para in doc.paragraphs]).strip() or "⚠️ ERROR: No text extracted from DOCX."
-    except Exception as e:
-        print(f"⚠️ ERROR extracting text from DOCX: {e}")
-        return ""
+    doc = docx.Document(docx_file)
+    return "\n".join([para.text for para in doc.paragraphs]).strip()
+
+# ✅ Function to Match Keywords Against Required Skills
+def match_keywords(resume_keywords, required_keywords):
+    matched = set(resume_keywords) & set(required_keywords)
+    score = len(matched) / len(required_keywords)  # Match percentage
+    return "Shortlisted ✅" if score > 0.5 else "Not Shortlisted ❌"
+
+# ✅ List of Required Keywords (Modify Based on Job Role)
+required_keywords = ["Python", "Machine Learning", "SQL", "Tableau", "Django", "Flask"]
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -48,34 +56,30 @@ def home():
         uploaded_file = request.files["resume"]
 
         if not uploaded_file:
-            print("⚠️ ERROR: No file uploaded.")
             return render_template("index.html", result="⚠️ No file uploaded.")
-
-        print(f"✅ File uploaded: {uploaded_file.filename}")
 
         if uploaded_file.filename.endswith(".pdf"):
             resume_text = extract_text_from_pdf(uploaded_file)
         elif uploaded_file.filename.endswith(".docx"):
             resume_text = extract_text_from_docx(uploaded_file)
         else:
-            print("⚠️ ERROR: Unsupported file format.")
             return render_template("index.html", result="⚠️ Unsupported file format.")
 
-        if "ERROR" in resume_text:
-            print(f"⚠️ ERROR in extracted text: {resume_text}")
-            return render_template("index.html", result=resume_text)
+        # Extract Keywords
+        resume_keywords = extract_keywords(resume_text)
 
-        print(f"🔍 Extracted Resume Text: {resume_text[:500]}...")  # Print first 500 characters
-
-        # Convert text to feature vector
+        # 🔍 ML-Based Shortlisting
         transformed_text = vectorizer.transform([resume_text])
-        prediction = model.predict(transformed_text)[0]
-        confidence_scores = model.predict_proba(transformed_text)[0]  # Get confidence of both classes
+        ml_prediction = model.predict(transformed_text)[0]
+        ml_result = "Shortlisted ✅" if ml_prediction == 1 else "Not Shortlisted ❌"
 
-        result = "Shortlisted ✅" if prediction == 1 else "Not Shortlisted ❌"
-        print(f"🔍 Prediction: {result}, Confidence: {confidence_scores}")
+        # 🔍 Keyword-Based Shortlisting
+        keyword_result = match_keywords(resume_keywords, required_keywords)
 
-        return render_template("index.html", result=result)
+        # ✅ Final Decision: If Either ML or Keyword Matching Shortlists the Candidate
+        final_result = "Shortlisted ✅" if (ml_result == "Shortlisted ✅" or keyword_result == "Shortlisted ✅") else "Not Shortlisted ❌"
+
+        return render_template("index.html", result=final_result)
 
     return render_template("index.html", result="")
 
