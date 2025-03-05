@@ -15,7 +15,7 @@ if os.path.exists(model_path) and os.path.exists(vectorizer_path):
     model = joblib.load(model_path)
     vectorizer = joblib.load(vectorizer_path)
 else:
-    print("⚠️ ERROR: Model files not found. Check your deployment.")
+    print("⚠️ ERROR: Model files not found. Check deployment.")
 
 # Function to extract text from PDF
 def extract_text_from_pdf(pdf_file):
